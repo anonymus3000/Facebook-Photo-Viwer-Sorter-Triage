@@ -1,0 +1,15 @@
+{
+  "name": "fb-photo-triage",
+  "version": "1.0.0",
+  "description": "Fast keyboard-driven triage of large lists of Facebook photo URLs",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^33.0.0"
+  },
+  "dependencies": {
+    "npm": "^11.21.1"
+  }
+}

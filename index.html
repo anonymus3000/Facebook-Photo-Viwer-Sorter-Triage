@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>FB Photo Triage</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style type="text/tailwindcss">
+    @layer components {
+      .btn { @apply w-full rounded-lg bg-slate-800 px-3 py-2 text-left text-sm font-medium text-slate-200 hover:bg-slate-700 active:bg-slate-600; }
+      .seg { @apply flex-1 rounded-md px-2 py-1.5 text-xs font-medium text-slate-400 hover:text-white; }
+      .badge { @apply flex items-baseline gap-2 rounded-lg px-3 py-1.5 text-sm; }
+    }
+  </style>
+  <style>
+    html, body { height: 100%; margin: 0; background: #0b0f17; }
+    webview { display: flex; width: 100%; height: 100%; background: #fff; }
+    kbd { background:#1f2937; border:1px solid #374151; border-bottom-width:2px; border-radius:6px;
+          padding:1px 8px; font:600 12px ui-monospace, monospace; color:#e5e7eb; min-width:28px; text-align:center; }
+    .seg-on { background:#4f46e5 !important; color:#fff !important; }
+  </style>
+</head>
+<body class="flex flex-col bg-[#0b0f17] text-slate-200 font-sans">
+
+  <!-- Header -->
+  <header class="flex items-center gap-4 border-b border-slate-800 px-4 py-2.5">
+    <div class="text-lg font-semibold tracking-tight">Photo triage</div>
+    <div id="progress" class="rounded-lg bg-slate-800 px-3 py-1.5 font-mono text-sm text-white">0 / 0</div>
+
+    <div class="flex gap-2">
+      <div class="badge bg-emerald-500/10 text-emerald-300">Saved <b id="saved" class="font-mono text-base">0</b></div>
+      <div class="badge bg-rose-500/10 text-rose-300">Discarded <b id="discarded" class="font-mono text-base">0</b></div>
+      <div class="badge bg-slate-700/40 text-slate-300">Unreviewed <b id="unreviewed" class="font-mono text-base">0</b></div>
+    </div>
+
+    <div class="ml-auto flex items-center gap-2">
+      <label for="jump" class="text-sm text-slate-400">Jump to</label>
+      <input id="jump" type="number" min="1" placeholder="e.g. 500"
+             class="w-28 rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-white outline-none focus:border-indigo-500">
+    </div>
+  </header>
+
+  <div class="flex min-h-0 flex-1">
+    <!-- Preview -->
+    <main class="flex min-w-0 flex-1 flex-col p-3">
+      <div class="mb-2 flex items-center gap-3">
+        <span id="chip" class="rounded-md px-2.5 py-1 text-xs font-semibold"></span>
+        <div id="url" class="min-w-0 flex-1 select-text truncate font-mono text-xs text-slate-400">—</div>
+        <button id="btnExternal" class="shrink-0 rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500">
+          Open in external browser
+        </button>
+      </div>
+
+      <div class="relative min-h-0 flex-1 overflow-hidden rounded-xl border border-slate-800 bg-slate-900">
+        <webview id="wv" partition="persist:facebook" src="about:blank"></webview>
+
+        <div id="loading" class="pointer-events-none absolute left-0 top-0 hidden h-1 w-full animate-pulse bg-indigo-500"></div>
+
+        <div id="empty" class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-900 text-center">
+          <p class="text-xl font-medium text-white">No links loaded</p>
+          <p class="max-w-sm text-sm text-slate-400">Load a .txt file with one Facebook photo URL per line, or resume a saved progress file.</p>
+          <button id="btnLoadBig" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500">Load text file</button>
+        </div>
+      </div>
+    </main>
+
+    <!-- Sidebar -->
+    <aside class="flex w-72 shrink-0 flex-col gap-5 overflow-y-auto border-l border-slate-800 p-4">
+      <section class="space-y-2">
+        <button id="btnLoad" class="btn">Load text file (.txt)</button>
+        <button id="btnExport" class="btn">Export saved links (.txt)</button>
+        <button id="btnSaveJson" class="btn">Save progress (.json)</button>
+        <button id="btnResume" class="btn">Resume progress (.json)</button>
+      </section>
+
+      <section>
+        <div class="mb-2 text-sm font-medium text-slate-300">Review mode</div>
+        <div id="filters" class="flex rounded-lg bg-slate-800 p-1">
+          <button data-filter="all" class="seg">All</button>
+          <button data-filter="saved" class="seg">Saved</button>
+          <button data-filter="discarded" class="seg">Discarded</button>
+          <button data-filter="unreviewed" class="seg">New</button>
+        </div>
+        <div id="viewcount" class="mt-2 text-xs text-slate-500"></div>
+      </section>
+
+      <section>
+        <button id="btnPause" class="btn">Pause hotkeys (for login)</button>
+        <div id="pausedNote" class="mt-2 hidden rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
+          Hotkeys are paused. You can type into Facebook's login form now.
+        </div>
+      </section>
+
+      <section class="rounded-xl border border-slate-800 bg-slate-900/60 p-3">
+        <div class="mb-3 text-sm font-medium text-slate-300">Shortcuts</div>
+        <ul class="space-y-2 text-sm text-slate-300">
+          <li class="flex items-center justify-between"><kbd>D</kbd><span>Save, then next</span></li>
+          <li class="flex items-center justify-between"><kbd>A</kbd><span>Discard, then next</span></li>
+          <li class="flex items-center justify-between"><kbd>E</kbd><span>Next photo</span></li>
+          <li class="flex items-center justify-between"><kbd>Q</kbd><span>Previous photo</span></li>
+          <li class="flex items-center justify-between"><kbd>X</kbd><span>Forward 10</span></li>
+          <li class="flex items-center justify-between"><kbd>Z</kbd><span>Back 10</span></li>
+          <li class="flex items-center justify-between"><kbd>U</kbd><span>Undo last mark</span></li>
+          <li class="flex items-center justify-between"><kbd>O</kbd> <span>or <kbd>Space</kbd> open externally</span></li>
+        </ul>
+      </section>
+    </aside>
+  </div>
+
+  <div id="toast" class="pointer-events-none fixed bottom-5 left-1/2 hidden -translate-x-1/2 rounded-lg bg-slate-100 px-4 py-2 text-sm font-medium text-slate-900 shadow-lg"></div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
